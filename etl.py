@@ -2,14 +2,13 @@ import pandas as pd
 import numpy as np
 import re
 
-
 def valid_searches(searches):
     # split on \\n-
     searches = searches.split('\\n-')
-    
+
     # filter the list
     searches = [item for item in searches if not item.startswith('---')]
-    
+
     # check if list has values
     if len(searches) == 0:
         return []
@@ -18,7 +17,7 @@ def valid_searches(searches):
         searches = [re.sub(r'(\\.n|\\.n\s+:|\\)', ' ', item) for item in searches]
         searches = [re.sub(r'\s+:', ',', item) for item in searches]
         searches = [item.split(',') for item in searches]
-        
+
         # calculate valid searches
         valid_searches = []
         for item in searches:
@@ -34,7 +33,7 @@ def valid_searches(searches):
 
 def main():
 	# read in the data
-	data = pd.read_csv("inferred_users.20180126.csv.gz", compression='gzip', names=['user_id', 'searches'])
+	data = pd.read_csv("data/inferred_users.20180126.csv.gz", compression='gzip', names=['user_id', 'searches'])
 
 	data['valid_searches'] = data['searches'].apply(valid_searches)
 	data['num_valid_searches'] = data['valid_searches'].apply(len)
@@ -44,5 +43,3 @@ def main():
 
 if __name__ == '__main__':
 	main()
-
-	
