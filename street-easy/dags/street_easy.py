@@ -1,6 +1,5 @@
 import os
 import logging
-import datetime
 from datetime import datetime, timedelta
 
 from airflow import DAG
@@ -13,15 +12,21 @@ from airflow.operators import (StreetEasyOperator)
 
 default_args = {
     'owner': 'shravan',
+    'start_date': datetime(2018, 1, 20),
+    'end_date': datetime(2018, 3, 30),
     'depends_on_past': False,
     'provide_context': True,
 }
+
+# s3://streeteasy-data-exercise/inferred_users.201832018-03-11.csv.gz
+# s3://streeteasy-data-exercise/inferred_users.20180120.csv.gz
+# s3://streeteasy-data-exercise/inferred_users.20180120.csv.gz
 
 dag = DAG(
         'street_easy',
         default_args=default_args,
         description='Load and Transform street easy data',
-        start_date=datetime.utcnow() - timedelta(hours=5),
+        #start_date=datetime.utcnow() - timedelta(hours=5),
         schedule_interval='@daily',
         max_active_runs=1
          )
@@ -47,7 +52,8 @@ extract_and_transform_streeteasy_data = StreetEasyOperator(
     dag=dag,
     aws_credentials_id = "aws_credentials",
     s3_bucket = "streeteasy-data-exercise",
-    s3_key = "test.csv.gz"
+    #s3_key = "test.csv.gz"
+    s3_key = "inferred_users.{ds}.csv.gz"
 )
 
 end_operator = DummyOperator(task_id='End_Execution', dag=dag)

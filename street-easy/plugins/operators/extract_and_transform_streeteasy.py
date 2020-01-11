@@ -8,7 +8,7 @@ import re
 from s3fs.core import S3FileSystem
 
 class StreetEasyOperator(BaseOperator):
-    #template_fields = ("s3_key",)
+    template_fields = ("s3_key",)
 
     @apply_defaults
     def __init__(self,
@@ -55,15 +55,19 @@ class StreetEasyOperator(BaseOperator):
         aws_hook = AwsHook(self.aws_credentials_id)
         credentials = aws_hook.get_credentials()
         self.log.info("Executing StreetEasyOperator!!")
-        #rendered_key = self.s3_key.format(**context)
-        #s3_path = "s3://{}/{}".format(self.s3_bucket, rendered_key)
-        s3_path = "s3://{}/{}".format(self.s3_bucket, self.s3_key)
+        rendered_key = self.s3_key.format(**context)
+        self.log.info("Rendered Key is {}".format(rendered_key))
+        rendered_key_no_dashes = re.sub(r'-', '', rendered_key)
+        self.log.info("Rendered Key no dashes {}".format(rendered_key_no_dashes))
+        s3_path = "s3://{}/{}".format(self.s3_bucket, rendered_key_no_dashes)
+        #s3_path = "s3://{}/{}".format(self.s3_bucket, self.s3_key)
         self.log.info("Process data from {}".format(s3_path))
         s3 = S3FileSystem(anon=False, key=credentials.access_key, secret=credentials.secret_key)
 
-        data = pd.read_csv(s3.open(s3_path, mode='rb'), compression='gzip', names=['user_id', 'searches'])
-        data['valid_searches'] = data['searches'].apply(StreetEasyOperator.valid_searches)
-        data['num_valid_searches'] = data['valid_searches'].apply(len)
+        with s3.open(s3_path, mode='rb') as s3_file:
+            data = pd.read_csv(s3_file, compression='gzip', names=['user_id', 'searches'])
+            data['valid_searches'] = data['searches'].apply(StreetEasyOperator.valid_searches)
+            data['num_valid_searches'] = data['valid_searches'].apply(len)
 
-        self.log.info("Total valid searches today are: {}".format(np.sum(data['num_valid_searches'])))
-        self.log.info("Total users today are: {}".format(np.sum(data['num_valid_searches'] > 0)))
+            self.log.info("Total valid searches today are: {}".format(np.sum(data['num_valid_searches'])))
+            self.log.info("Total users today are: {}".format(np.sum(data['num_valid_searches'] > 0)))
