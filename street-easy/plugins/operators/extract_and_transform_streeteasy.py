@@ -8,7 +8,7 @@ import re
 from s3fs.core import S3FileSystem
 
 class StreetEasyOperator(BaseOperator):
-    template_fields = ("s3_key", "s3_dest_key",)
+    template_fields = ("s3_key", "s3_dest_key", "s3_dest_df_key",)
 
     @apply_defaults
     def __init__(self,
@@ -18,6 +18,7 @@ class StreetEasyOperator(BaseOperator):
                  s3_dest_bucket="",
                  s3_key="",
                  s3_dest_key="",
+                 s3_dest_df_key="",
                  *args, **kwargs):
 
         super(StreetEasyOperator, self).__init__(*args, **kwargs)
@@ -25,6 +26,7 @@ class StreetEasyOperator(BaseOperator):
         self.s3_dest_bucket = s3_dest_bucket
         self.s3_key = s3_key
         self.s3_dest_key = s3_dest_key
+        self.s3_dest_df_key = s3_dest_df_key
         self.aws_credentials_id = aws_credentials_id
         self.aws_credentials_dest_id = aws_credentials_dest_id
 
@@ -56,6 +58,47 @@ class StreetEasyOperator(BaseOperator):
                 if search_dict['enabled'] == 'true' and int(search_dict.get('clicks', 0)) >= 3:
                     valid_searches.append(search_dict)
             return valid_searches
+
+    def avg_listings(valid_searches):
+        num_listings = 0
+        listings = 0
+        for item in valid_searches:
+            if item.get('listings_sent'):
+                num_listings = num_listings + 1
+                listings = listings + int(item.get('listings_sent'))
+
+        if num_listings > 0:
+            return np.round(np.sum(listings)/num_listings, 2)
+        else:
+            return 0
+
+    def type_of_search(valid_searches):
+        rental = 0
+        sale = 0
+        for item in valid_searches:
+            if item.get('type') == 'Rental':
+                rental = rental + 1
+            elif item.get('type') == 'Sale':
+                sale = sale + 1
+            else:
+                pass
+
+        if rental > 0 and sale > 0:
+            return "rental_and_sale"
+        elif rental > 0:
+            return "rental"
+        elif sale > 0:
+            return "sale"
+        else:
+            return "none"
+
+    def list_of_valid_searches(valid_searches):
+        search_list = []
+        for item in valid_searches:
+            if item.get('search_id'):
+                search_list.append(item.get('search_id'))
+        return search_list
+
 
     def execute(self, context):
         self.log.info("Executing StreetEasyOperator!!")
@@ -89,14 +132,31 @@ class StreetEasyOperator(BaseOperator):
             data['num_valid_searches'] = data['valid_searches'].apply(len)
 
             # keep only searches
-            data = data[data.num_valid_searches > 0]
+            data = data[data.num_valid_searches > 0].reset_index(drop=True)
 
             # remove original searches
             data = data.drop(['searches'], axis=1)
 
             # calculate avg_listings
+            data['avg_listings'] = data['valid_searches'].apply(StreetEasyOperator.avg_listings)
 
             # calculate type_of_search
+            data['type_of_search'] = data['valid_searches'].apply(StreetEasyOperator.type_of_search)
+
+            # prepare a list of valid search ids
+            data['list_of_valid_searches'] = data['valid_searches'].apply(StreetEasyOperator.list_of_valid_searches)
+
+            # drop valid_searches column
+            data = data.drop(['valid_searches'], axis=1)
+
+            # get unique valid searches
+            unique_valid_searches = set()
+            for sublist in data['list_of_valid_searches']:
+                for item in sublist:
+                    unique_valid_searches.add(re.sub(r'\'', '', item))
+
+            # construct a dataframe
+            unique_valid_searches_df = pd.DataFrame({'searches': list(unique_valid_searches)})
 
             self.log.info("Total valid searches today are: {}".format(np.sum(data['num_valid_searches'])))
             self.log.info("Total users today are: {}".format(np.sum(data['num_valid_searches'] > 0)))
@@ -110,9 +170,19 @@ class StreetEasyOperator(BaseOperator):
         # get a S3 file handle for destination
         s3_dest = S3FileSystem(anon=False, key=credentials_dest.access_key, secret=credentials_dest.secret_key)
 
-        self.log.info("Load data into {}".format(s3_dest_path))
         # stream the transformed data into s3
         with s3_dest.open(s3_dest_path, mode='wb') as s3_dest_file:
+            self.log.info("Started writing {}".format(unique_valid_searches_df.shape))
+            s3_dest_file.write(unique_valid_searches_df.to_csv(None, index=False).encode())
+            self.log.info("Completed writing {}".format(unique_valid_searches_df.shape))
+
+        rendered_dest_df_key = self.s3_dest_df_key.format(**context)
+        rendered_dest_df_key_no_dashes = re.sub(r'-', '', rendered_dest_df_key)
+        self.log.info("Rendered Key no dashes {}".format(rendered_dest_df_key_no_dashes))
+        s3_dest_df_path = "s3://{}/{}".format(self.s3_dest_bucket, rendered_dest_df_key_no_dashes)
+
+        with s3_dest.open(s3_dest_df_path, mode='wb') as s3_dest_file:
+            self.log.info("Started writing {}".format(data.shape))
             s3_dest_file.write(data.to_csv(None, index=False).encode())
             self.log.info("Completed writing {}".format(data.shape))
 
