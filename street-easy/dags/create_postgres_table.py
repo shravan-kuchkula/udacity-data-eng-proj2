@@ -31,8 +31,7 @@ create_search_stats_table = PostgresOperator(
     CREATE TABLE IF NOT EXISTS public.search_stats (
     	day date,
     	num_searches int,
-    	num_users int,
-    	num_sales int
+    	num_users int
     );
     '''
 )

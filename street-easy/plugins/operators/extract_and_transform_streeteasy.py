@@ -8,6 +8,27 @@ import re
 from s3fs.core import S3FileSystem
 
 class StreetEasyOperator(BaseOperator):
+    """
+    Extract data from source S3, Process it in-memory, Load it to dest S3.
+
+    :param aws_credentials_id: reference to source aws hook containing iam details.
+    :type aws_credentials_id: str
+    :param aws_credentials_dest_id: reference to dest aws hook containing iam details.
+    :type aws_credentials_id: str
+    :param s3_bucket: source s3 bucket name
+    :type s3_bucket: str
+    :param s3_dest_bucket: destination s3 bucket name
+    :type s3_dest_bucket: str
+    :param s3_key: source s3 file (templated)
+    :type s3_key: Can receive a str representing a prefix,
+        the prefix can contain a path that is partitioned by some field.
+    :param s3_dest_key: first destination s3 file (templated)
+    :type s3_dest_key: Can receive a str representing a prefix,
+        the prefix can contain a path that is partitioned by some field.
+    :param s3_dest_df_key: second destination s3 file (templated)
+    :type s3_dest_df_key: Can receive a str representing a prefix,
+        the prefix can contain a path that is partitioned by some field.
+    """
     template_fields = ("s3_key", "s3_dest_key", "s3_dest_df_key",)
 
     @apply_defaults
@@ -22,44 +43,58 @@ class StreetEasyOperator(BaseOperator):
                  *args, **kwargs):
 
         super(StreetEasyOperator, self).__init__(*args, **kwargs)
+        self.aws_credentials_id = aws_credentials_id
+        self.aws_credentials_dest_id = aws_credentials_dest_id
         self.s3_bucket = s3_bucket
         self.s3_dest_bucket = s3_dest_bucket
         self.s3_key = s3_key
         self.s3_dest_key = s3_dest_key
         self.s3_dest_df_key = s3_dest_df_key
-        self.aws_credentials_id = aws_credentials_id
-        self.aws_credentials_dest_id = aws_credentials_dest_id
 
     def valid_searches(searches):
-        # split on \\n-
+        ''' Parses the search string and returns only valid searches.
+            Additional details: intended to be applied to a pandas series.
+
+            :param searches: raw unparsed search string
+            :type str
+            :return valid_searches: list of valid searches
+            :type list
+        '''
+        # each search is delimited by \\n-
         searches = searches.split('\\n-')
 
         # filter the list
         searches = [item for item in searches if not item.startswith('---')]
 
-        # check if list has values
+        # if no searches then return empty list otherwise keep parsing
         if len(searches) == 0:
             return []
         else:
+            # parse the searches and make a list of searches
             searches = [item for item in searches if not item.startswith('---')]
             searches = [re.sub(r'(\\.n|\\.n\s+:|\\)', ' ', item) for item in searches]
             searches = [re.sub(r'\s+:', ',', item) for item in searches]
             searches = [item.split(',') for item in searches]
 
-            # calculate valid searches
+            # Determine validity:
+            # a valid search contains enabled==true and has clicks >= 3
+            # store only valid searches in the list to return.
             valid_searches = []
             for item in searches:
                 search_dict = {}
                 for key in item:
-                    if key.split(':')[0] in ('search_id', 'enabled', 'clicks', 'type', 'listings_sent', 'recommended'):
+                    if key.split(':')[0] in ('search_id', 'enabled', 'clicks',
+                                        'type', 'listings_sent', 'recommended'):
                         d_key = key.split(':')[0]
                         d_value = key.split(':')[1].strip()
                         search_dict[d_key] = d_value
-                if search_dict['enabled'] == 'true' and int(search_dict.get('clicks', 0)) >= 3:
+                if search_dict['enabled'] == 'true' and
+                    int(search_dict.get('clicks', 0)) >= 3:
                     valid_searches.append(search_dict)
+
             return valid_searches
 
-    def avg_listings(valid_searches):
+    def avg_listings_sent(valid_searches):
         num_listings = 0
         listings = 0
         for item in valid_searches:
@@ -73,6 +108,12 @@ class StreetEasyOperator(BaseOperator):
             return 0
 
     def type_of_search(valid_searches):
+        '''
+            Categorize the type of search given a list of searches.
+
+            :params valid_searches: list of searches
+            :return enum('rental_and_sale', 'sale', 'rental', 'none')
+        '''
         rental = 0
         sale = 0
         for item in valid_searches:
@@ -93,6 +134,12 @@ class StreetEasyOperator(BaseOperator):
             return "none"
 
     def list_of_valid_searches(valid_searches):
+        '''
+            Convert a list of lists to a single list
+
+            :param valid_searches: list of lists
+            :return search_list: single list of searches.
+        '''
         search_list = []
         for item in valid_searches:
             if item.get('search_id'):
@@ -126,19 +173,20 @@ class StreetEasyOperator(BaseOperator):
             # read in the data from s3
             data = pd.read_csv(s3_file, compression='gzip', names=['user_id', 'searches'])
 
-            # transform the data
+            # create valid searches
             data['valid_searches'] = data['searches'].apply(StreetEasyOperator.valid_searches)
 
+            # calculate num valid searches per user
             data['num_valid_searches'] = data['valid_searches'].apply(len)
 
-            # keep only searches
+            # keep only valid searches
             data = data[data.num_valid_searches > 0].reset_index(drop=True)
 
             # remove original searches
             data = data.drop(['searches'], axis=1)
 
-            # calculate avg_listings
-            data['avg_listings'] = data['valid_searches'].apply(StreetEasyOperator.avg_listings)
+            # calculate avg_listings_sent
+            data['avg_listings'] = data['valid_searches'].apply(StreetEasyOperator.avg_listings_sent)
 
             # calculate type_of_search
             data['type_of_search'] = data['valid_searches'].apply(StreetEasyOperator.type_of_search)
@@ -146,7 +194,7 @@ class StreetEasyOperator(BaseOperator):
             # prepare a list of valid search ids
             data['list_of_valid_searches'] = data['valid_searches'].apply(StreetEasyOperator.list_of_valid_searches)
 
-            # drop valid_searches column
+            # drop valid searches as we don't need it anymore
             data = data.drop(['valid_searches'], axis=1)
 
             # get unique valid searches
@@ -186,4 +234,4 @@ class StreetEasyOperator(BaseOperator):
             s3_dest_file.write(data.to_csv(None, index=False).encode())
             self.log.info("Completed writing {}".format(data.shape))
 
-        self.log.info("ETL process completed")
+        self.log.info("StreetEasyOperator completed")

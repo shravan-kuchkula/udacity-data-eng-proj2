@@ -8,19 +8,27 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.hooks.S3_hook import S3Hook
 from airflow.contrib.hooks.aws_hook import AwsHook
-from airflow.operators import (StreetEasyOperator)
+from airflow.operators import (StreetEasyOperator, ValidSearchStatsOperator)
 
+# Default arguments for DAG:
+# start_date : date from when we need to start processing.
+# end_data   : date until when we need to process the data.
+# depends_on_past : this DAG is independent of previous runs.
+# email_on_retry : We don't want emails on retry.
+# retries : Number of times the task is retries upon failure.
+# retry_delay : How much time should the scheduler wait before re-attempt.
+# provide_context : When you provide_context=True to an operator, we pass
+#   along the Airflow context variables to be used inside the operator.
 default_args = {
     'owner': 'shravan',
     'start_date': datetime(2018, 1, 20),
-    'end_date': datetime(2018, 2, 1),
+    'end_date': datetime(2018, 2, 3),
     'depends_on_past': False,
+    'email_on_retry': False,
+    'retries': 3,
+    'retry_delay': timedelta(minutes=5),
     'provide_context': True,
 }
-
-# s3://streeteasy-data-exercise/inferred_users.201832018-03-11.csv.gz
-# s3://streeteasy-data-exercise/inferred_users.20180120.csv.gz
-# s3://streeteasy-data-exercise/inferred_users.20180120.csv.gz
 
 dag = DAG(
         'street_easy',
@@ -42,7 +50,7 @@ def list_keys(*args, **kwargs):
 start_operator = DummyOperator(task_id='Begin_Execution', dag=dag)
 
 list_task = PythonOperator(
-    task_id="list_keys",
+    task_id="check_connectivity_to_s3",
     python_callable=list_keys,
     dag=dag
 )
@@ -55,11 +63,30 @@ extract_and_transform_streeteasy_data = StreetEasyOperator(
     s3_bucket = "streeteasy-data-exercise",
     s3_dest_bucket = "skuchkula-etl",
     s3_key = "inferred_users.{ds}.csv.gz",
-    s3_dest_key = "valid_searches.{ds}.csv.gz",
+    s3_dest_key = "unique_valid_searches_{ds}.csv",
+    s3_dest_df_key = "valid_searches_{ds}.csv",
+)
+
+calculate_valid_search_stats = ValidSearchStatsOperator(
+    task_id = "calculate_valid_search_stats",
+    dag=dag,
+    aws_credentials_id = "aws_credentials_dest",
+    redshift_conn_id = "redshift",
+    table = "search_stats",
+    columns = """
+        day,
+        num_searches,
+        num_users
+    """,
+    s3_bucket = "skuchkula-etl",
+    s3_key = "valid_searches_{ds}.csv",
+    today = "{ds}",
 )
 
 end_operator = DummyOperator(task_id='End_Execution', dag=dag)
 
+# DAG layout
 start_operator >> list_task
 list_task >> extract_and_transform_streeteasy_data
-extract_and_transform_streeteasy_data >> end_operator
+extract_and_transform_streeteasy_data >> calculate_valid_search_stats
+calculate_valid_search_stats >> end_operator
