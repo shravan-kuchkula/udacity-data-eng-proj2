@@ -24,11 +24,11 @@ services:
       - EXECUTOR=Local
       - FERNET_KEY=jsDPRErfv8Z_eVTnGfF8ywd19j4pyqE3NpdUBA_oRTo=
     volumes:
-      - ./sparkify/dags:/usr/local/airflow/dags
+      - ./street-easy/dags:/usr/local/airflow/dags
       # Uncomment to include custom plugins
-      - ./sparkify/plugins:/usr/local/airflow/plugins
+      - ./street-easy/plugins:/usr/local/airflow/plugins
       # Additional python packages used inside airflow operators
-      - ./sparkify/requirements.txt:/requirements.txt
+      - ./street-easy/requirements.txt:/requirements.txt
     ports:
       - "8080:8080"
     command: webserver

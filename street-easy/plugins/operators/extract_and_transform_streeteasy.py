@@ -9,7 +9,7 @@ from s3fs.core import S3FileSystem
 
 class StreetEasyOperator(BaseOperator):
     """
-    Extract data from source S3, Process it in-memory, Load it to dest S3.
+    Extract data from source S3, process it in-memory, load it to dest S3.
 
     :param aws_credentials_id: reference to source aws hook containing iam details.
     :type aws_credentials_id: str
@@ -88,8 +88,7 @@ class StreetEasyOperator(BaseOperator):
                         d_key = key.split(':')[0]
                         d_value = key.split(':')[1].strip()
                         search_dict[d_key] = d_value
-                if search_dict['enabled'] == 'true' and
-                    int(search_dict.get('clicks', 0)) >= 3:
+                if search_dict['enabled'] == 'true' and int(search_dict.get('clicks', 0)) >= 3:
                     valid_searches.append(search_dict)
 
             return valid_searches
@@ -159,6 +158,8 @@ class StreetEasyOperator(BaseOperator):
         credentials_dest = aws_dest_hook.get_credentials()
 
         # build the s3 source path
+        # as we are providing_context = True, we get them in kwargs form
+        # use **context to upack the dictionary and format the s3_key
         rendered_key = self.s3_key.format(**context)
         rendered_key_no_dashes = re.sub(r'-', '', rendered_key)
         self.log.info("Rendered Key no dashes {}".format(rendered_key_no_dashes))

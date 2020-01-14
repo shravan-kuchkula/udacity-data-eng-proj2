@@ -22,7 +22,7 @@ from airflow.operators import (StreetEasyOperator, ValidSearchStatsOperator)
 default_args = {
     'owner': 'shravan',
     'start_date': datetime(2018, 1, 20),
-    'end_date': datetime(2018, 2, 3),
+    'end_date': datetime(2018, 2, 6),
     'depends_on_past': False,
     'email_on_retry': False,
     'retries': 3,
@@ -76,7 +76,11 @@ calculate_valid_search_stats = ValidSearchStatsOperator(
     columns = """
         day,
         num_searches,
-        num_users
+        num_users,
+        num_rental_searches,
+        num_sales_searches,
+        num_rental_and_sales_searches,
+        num_none_type_searches
     """,
     s3_bucket = "skuchkula-etl",
     s3_key = "valid_searches_{ds}.csv",

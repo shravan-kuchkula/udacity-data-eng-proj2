@@ -1,5 +1,5 @@
 ## Data Pipeline to process StreetEasy data
-**Project Description**: A daily snapshot of of user search history and related data is saved to S3. Each file represents a single date, as noted by the filename: `inferred_users.20180330.csv.gz`. Each line in each file represents a *unique user*, as identified by `id` column. Information on each user's searches and engagement is stored in `searches` column. Given this data,
+**Project Description**: A daily snapshot of user search history and related data is saved to S3. Each file represents a single date, as noted by the filename: `inferred_users.20180330.csv.gz`. Each line in each file represents a *unique user*, as identified by `id` column. Information on each user's searches and engagement is stored in `searches` column. Given this data,
 
 **Data Description**: The source data resides in S3 `s3://streeteasy-data-exercise` and needs to be processed using a data pipeline to answer business questions.
 
@@ -59,9 +59,27 @@ unique_valid_searches_20180214.csv
 ```
 
 ```bash
+s3://skuchkula-etl/
 valid_searches_20180120.csv
 valid_searches_20180121.csv
 valid_searches_20180122.csv
 valid_searches_20180123.csv
 valid_searches_20180214.csv
+...
 ```
+
+## Tasks
+
+### Task 1: Create an ETL to process files. Recommend any alternative file formats or compression types you think would help with storage costs or provide downstream compute flexibility.
+Here are some difficulties with CSV files:
+- No defined schema: There are no data types included and column names beyond a header row.
+- Nested data requires special handling:
+-
+In addition to these issues with using CSV file format, Spark has some specific problems when working with CSV data:
+- CSV files are quite slow to import and parse.
+- The files cannot be shared between workers during the import process.
+- If no schema is defined, then all data must be read before a schema can be inferred.
+- Spark has a feature known as *predicate pushdown* - which is an idea of ordering tasks to do the least amount of work. Example, *filtering* data prior to processing is one of the primary optimizations of predicate pushdown, this drastically reduces the amount of information that must be processed in large data sets. Unfortunately, we cannot filter the CSV data via predicate pushdown.
+- Finally, Spark processes are often multi-step and may utilize an intermediate file representation. These representations allow data to be used later without regenerating the data from source.
+
+**Parquet Format**: Parquet is a compressed columnar data format and is structured with data accessible in chunks that allows efficient read/write operations without processing the entire file. This structured format supports Spark's predicate pushdown functionality, thus providing significant performance improvement. Finally, parquet files automatically include schema information and handle data encoding. This is perfect for intermediary or on-disk representation of processed data. Note that parquet files are binary file format and can only be used with proper tools.

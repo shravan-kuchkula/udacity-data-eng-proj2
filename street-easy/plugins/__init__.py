@@ -6,10 +6,11 @@ import operators
 import helpers
 
 # Defining the plugin class
-class UdacityPlugin(AirflowPlugin):
-    name = "udacity_plugin"
+class SEPlugin(AirflowPlugin):
+    name = "se_plugin"
     operators = [
-        operators.StreetEasyOperator
+        operators.StreetEasyOperator,
+        operators.ValidSearchStatsOperator
     ]
     helpers = [
         #helpers.SqlQueries

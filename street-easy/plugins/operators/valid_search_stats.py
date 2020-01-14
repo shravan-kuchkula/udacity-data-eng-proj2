@@ -64,6 +64,8 @@ class ValidSearchStatsOperator(BaseOperator):
         columns = "({})".format(self.columns)
 
         # build the s3 source path
+        # as we are providing_context = True, we get them in kwargs form
+        # use **context to upack the dictionary and format the s3_key
         rendered_key = self.s3_key.format(**context)
         rendered_key_no_dashes = re.sub(r'-', '', rendered_key)
         self.log.info("Rendered Key no dashes {}".format(rendered_key_no_dashes))
@@ -84,10 +86,21 @@ class ValidSearchStatsOperator(BaseOperator):
 
             num_valid_searches = np.sum(data['num_valid_searches'])
             num_users_with_valid_searches = np.sum(data['num_valid_searches'] > 0)
-            values = (render_today, num_valid_searches, num_users_with_valid_searches)
+            num_rental_searches = np.sum(data['type_of_search'] == 'rental')
+            num_sales_searches = np.sum(data['type_of_search'] == 'sale')
+            num_rental_and_sales_searches = np.sum(data['type_of_search'] == 'rental_and_sale')
+            num_none_type_searches = np.sum(data['type_of_search'] == 'none')
+            values = (render_today, num_valid_searches, num_users_with_valid_searches,
+                        num_rental_searches, num_sales_searches, num_rental_and_sales_searches,
+                        num_none_type_searches)
 
+            self.log.info("Loading stats into Redshift")
             self.log.info("Total valid searches today are: {}".format(np.sum(data['num_valid_searches'])))
             self.log.info("Total users today are: {}".format(np.sum(data['num_valid_searches'] > 0)))
+            self.log.info("Total rental searches today are: {}".format(np.sum(data['type_of_search'] == 'rental')))
+            self.log.info("Total sales searches today are: {}".format(np.sum(data['type_of_search'] == 'sale')))
+            self.log.info("Total rental and sales searches today are: {}".format(np.sum(data['type_of_search'] == 'rental_and_sale')))
+            self.log.info("Total none type searches today are: {}".format(np.sum(data['type_of_search'] == 'none')))
 
             load_sql = ValidSearchStatsOperator.load_search_stats_sql.format(
                 self.table,
