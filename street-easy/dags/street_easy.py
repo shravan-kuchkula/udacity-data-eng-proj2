@@ -22,7 +22,7 @@ from airflow.operators import (StreetEasyOperator, ValidSearchStatsOperator)
 default_args = {
     'owner': 'shravan',
     'start_date': datetime(2018, 1, 20),
-    'end_date': datetime(2018, 2, 6),
+    'end_date': datetime(2018, 3, 30),
     'depends_on_past': False,
     'email_on_retry': False,
     'retries': 3,
@@ -39,7 +39,7 @@ dag = DAG(
         max_active_runs=1
          )
 
-def list_keys(*args, **kwargs):
+def check_connectivity_to_s3(*args, **kwargs):
     hook = S3Hook(aws_conn_id='aws_credentials')
     bucket = Variable.get('s3_bucket')
     logging.info(f"Listing Keys from {bucket}")
@@ -49,9 +49,9 @@ def list_keys(*args, **kwargs):
 
 start_operator = DummyOperator(task_id='Begin_Execution', dag=dag)
 
-list_task = PythonOperator(
+check_connectivity_to_s3 = PythonOperator(
     task_id="check_connectivity_to_s3",
-    python_callable=list_keys,
+    python_callable=check_connectivity_to_s3,
     dag=dag
 )
 
@@ -60,8 +60,8 @@ extract_and_transform_streeteasy_data = StreetEasyOperator(
     dag=dag,
     aws_credentials_id = "aws_credentials",
     aws_credentials_dest_id = "aws_credentials_dest",
-    s3_bucket = "streeteasy-data-exercise",
-    s3_dest_bucket = "skuchkula-etl",
+    s3_bucket = Variable.get('s3_bucket'),
+    s3_dest_bucket = Variable.get('s3_dest_bucket'),
     s3_key = "inferred_users.{ds}.csv.gz",
     s3_dest_key = "unique_valid_searches_{ds}.csv",
     s3_dest_df_key = "valid_searches_{ds}.csv",
@@ -82,7 +82,7 @@ calculate_valid_search_stats = ValidSearchStatsOperator(
         num_rental_and_sales_searches,
         num_none_type_searches
     """,
-    s3_bucket = "skuchkula-etl",
+    s3_bucket = Variable.get('s3_dest_bucket'),
     s3_key = "valid_searches_{ds}.csv",
     today = "{ds}",
 )
@@ -90,7 +90,7 @@ calculate_valid_search_stats = ValidSearchStatsOperator(
 end_operator = DummyOperator(task_id='End_Execution', dag=dag)
 
 # DAG layout
-start_operator >> list_task
-list_task >> extract_and_transform_streeteasy_data
+start_operator >> check_connectivity_to_s3
+check_connectivity_to_s3 >> extract_and_transform_streeteasy_data
 extract_and_transform_streeteasy_data >> calculate_valid_search_stats
 calculate_valid_search_stats >> end_operator

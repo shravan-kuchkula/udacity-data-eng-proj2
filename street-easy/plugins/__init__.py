@@ -13,5 +13,4 @@ class SEPlugin(AirflowPlugin):
         operators.ValidSearchStatsOperator
     ]
     helpers = [
-        #helpers.SqlQueries
     ]
