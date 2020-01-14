@@ -30,14 +30,15 @@ default_args = {
     'provide_context': True,
 }
 
+# Dag will start automatically when turned on
+# This is because the start date is in the past
 dag = DAG(
         'street_easy',
         default_args=default_args,
         description='Load and Transform street easy data',
-        #start_date=datetime.utcnow() - timedelta(hours=5),
         schedule_interval='@daily',
         max_active_runs=1
-         )
+)
 
 def check_connectivity_to_s3(*args, **kwargs):
     hook = S3Hook(aws_conn_id='aws_credentials')
