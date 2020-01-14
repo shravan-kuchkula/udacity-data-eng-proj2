@@ -30,6 +30,25 @@ By default, airflow comes with some simple built-in operators like `PythonOperat
 **Pipeline Schedule and Data Partitioning**:
 The events data residing on S3 is partitioned by *year* (2018) and *month* (11). Our task is to incrementally load the event json files, and run it through the entire pipeline to calculate song popularity and store the result back into S3. In this manner, we can obtain the top songs per day in an automated fashion using the pipeline. Please note, this is a trivial analyis, but you can imagine other complex queries that follow similar structure.
 
+```bash
+├── README.md
+├── docker-compose.yml
+└── street-easy
+    ├── dags
+    │   ├── create_postgres_table.py
+    │   └── street_easy.py
+    ├── plugins
+    │   ├── __init__.py
+    │   ├── helpers
+    │   │   ├── __init__.py
+    │   │   └── transforms.py
+    │   └── operators
+    │       ├── __init__.py
+    │       ├── extract_and_transform_streeteasy.py
+    │       └── valid_search_stats.py
+    └── requirements.txt
+```
+
 *S3 user searches data from 20th January to 30th March*:
 ```bash
 s3://streeteasy-data-exercise/
