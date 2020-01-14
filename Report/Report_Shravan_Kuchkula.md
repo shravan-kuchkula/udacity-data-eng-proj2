@@ -93,7 +93,7 @@ Here's the directory organization:
 * Do not email on retry.
 
 > Shown below is the data pipeline (street_easy DAG) execution starting on **2018-01-20** and ending on **2018-03-30**.
-![airflow_tree_view](Report_Shravan_Kuchkula/airflow_tree_view.png)
+![airflow_tree_view](Report_Shravan_Kuchkula_files/airflow_tree_view.png)
 > Note: The data for *2018-01-29 and 2018-01-30* is not available, thus we are skipping over that.
 
 **Destination S3 datasets and Redshift Table**:
@@ -343,7 +343,7 @@ plt.show()
 ### Business question: What would the email traffic look like if we changed the definition of a valid search from 3 clicks to 2?
 When the defintion of valid search is changed from `clicks >= 3` to `clicks >= 2` the number of searches and its corresponding stats increase in size. Shown below is a comparison for the first 3 days:
 
-![clicks](streeteasy-images/clicks.png)
+![clicks](Report_Shravan_Kuchkula_files/clicks.png)
 
 This means that the **email traffic would increase**.
 
