@@ -1,14 +1,14 @@
 
 ## ETL data pipeline to process StreetEasy data
 ### Author: Shravan Kuchkula (email: shravan.kuchkula@gmail.com)
-**Project Description**: 
+**Project Description**:
 
 An online real-estate company is interested in understanding `user enagagement` by analyzing user search patterns to send targeted emails to the users with valid searches. A valid search is termed as one where the search metadata contains `enabled:true` and number of clicks is atleast `3`.
 
  A daily snapshot of user search history and related data is saved to S3. Each file represents a single date, as noted by the filename: `inferred_users.20180330.csv.gz`. Each line in each file represents a *unique user*, as identified by `id` column. Information on each user's searches and engagement is stored in `searches` column. An example of this is shown below:
 
-![rawdata](streeteasy-images/rawdata.png)
- 
+![rawdata](Report_Shravan_Kuchkula_files/rawdata.png)
+
 
 **Data Description**: The source data resides in S3 `s3://<s3-bucket>` for each day from **2018-01-20** till **2018-03-30**, as shown:
 ```bash
@@ -28,7 +28,7 @@ inferred_users.20180330.csv.gz
 ```
 
 All this data needs to be processed using a data pipeline to answer the following **business questions:**
-1. Produce a list of **unique "valid searches"**. 
+1. Produce a list of **unique "valid searches"**.
 2. Produce, for each date, the **total number of valid searches** that existed on that date.
 3. Produce, for each date, the **total number of users** who had valid searches on that date.
 4. Given this data, determine which is the **most engaging search.**
@@ -44,7 +44,7 @@ The design of the pipeline can be summarized as:
 - Calculate summary statistics and load the summary stats into **Amazon Redshift**.
 
 > Figure showns the structure of the data pipeline as represented by a Airflow DAG
-![dag](streeteasy-images/dag.png)
+![dag](Report_Shravan_Kuchkula_files/dag.png)
 
 Finally, I have made use of `Jupyter Notebook` to connect to the `Redshift` cluster and answer the questions of interest.
 
@@ -58,9 +58,9 @@ Apache Airflow is a Python framework for programmatically creating workflows in 
 
 By default, airflow comes with some simple built-in operators like `PythonOperator`, `BashOperator`, `DummyOperator` etc., however, airflow lets you extend the features of a `BaseOperator` and create custom operators. For this project, I developed two custom operators:
 
-![operators](streeteasy-images/operators.png)
+![operators](Report_Shravan_Kuchkula_files/operators.png)
 
-- **StreetEasyOperator**: Extract data from **source S3 bucket**, processes the data in-memory by applying a series of transformations found inside `transforms.py`, then loads it to destination S3 bucket. Please see the code here: 
+- **StreetEasyOperator**: Extract data from **source S3 bucket**, processes the data in-memory by applying a series of transformations found inside `transforms.py`, then loads it to destination S3 bucket. Please see the code here:
 - **ValidSearchStatsOperator**: Takes data from **destination S3 bucket**, aggregates the data on a per-day basis, and uploads it to Reshift table `search_stats`. Please see the code here:
 
 Here's the directory organization:
@@ -93,11 +93,11 @@ Here's the directory organization:
 * Do not email on retry.
 
 > Shown below is the data pipeline (street_easy DAG) execution starting on **2018-01-20** and ending on **2018-03-30**.
-![airflow_tree_view](streeteasy-images/airflow_tree_view.png)
+![airflow_tree_view](Report_Shravan_Kuchkula/airflow_tree_view.png)
 > Note: The data for *2018-01-29 and 2018-01-30* is not available, thus we are skipping over that.
 
 **Destination S3 datasets and Redshift Table**:
-After each successful run of the DAG, two files are stored in the destination bucket: 
+After each successful run of the DAG, two files are stored in the destination bucket:
 * `s3://skuchkula-etl/unique_valid_searches_<date>.csv`: Contains a list of unique valid searches for each day.
 * `s3://skuchkula-etl/valid_searches_<date>.csv`: Contains a dataset with the following fields:
     * user_id: Unique id of the user
@@ -136,7 +136,7 @@ valid_searches_20180214.csv
 
 The `ValidSearchesStatsOperator` then takes each of datasets `valid_searches_{date}.csv` and calcuates summary stats and loads the results to **search_stats** table, as shown:
 
-![redshift](streeteasy-images/redshift.png)
+![redshift](Report_Shravan_Kuchkula/redshift.png)
 
 
 ## Answering business questions using data
@@ -325,8 +325,8 @@ From the data that is available, it appears that `Rental` searches are the most 
 
 
 ```python
-ax = df[['num_rental_searches', 
-         'num_sales_searches', 
+ax = df[['num_rental_searches',
+         'num_sales_searches',
          'num_rental_and_sales_searches',
         'num_none_type_searches']].plot(figsize=(12, 8), fontsize=12, linewidth=2, linestyle='--')
 ax.set_xlabel('Date', fontsize=16)
@@ -349,12 +349,12 @@ This means that the **email traffic would increase**.
 
 ### Business question: Report any interesting trends over the timespan of the data available.
 Mainly there are two trends observed with this timeseries data:
-- One is that there is a steady increase in the number of searches made and also in the number of users. The stats corresponding to individual search type shows that Rental searches are growing faster than Sales searches. 
+- One is that there is a steady increase in the number of searches made and also in the number of users. The stats corresponding to individual search type shows that Rental searches are growing faster than Sales searches.
 - Second interesting thing that I found was a sharp dip in the number of searches and users on 2018-03-23, which could be something interesting to investigate.
 
 ## Recommendations
 
-### Recommendations in data storage: 
+### Recommendations in data storage:
 In terms of storing data, using CSV files comes with some problems down the line. Here are some difficulties with CSV files:
 - No defined schema: There are no data types included and column names beyond a header row.
 - Nested data requires special handling:
