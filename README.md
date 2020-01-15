@@ -191,6 +191,7 @@ df = df.set_index('day')
 print(df.shape)
 df.head()
 ```
+```
     (68, 6)
 ```
 ![dataframe](images/dataframe.png)
@@ -286,7 +287,7 @@ The search field coming through from the application appear to by `YAML` format.
 **pre-requisites**:
 - Docker and docker-compose must be running on your laptop.
 - You have credentials for source and destination S3 buckets. (Both are private buckets)
-- You need to have AWS Redshift cluster endpoint. [guide to create](https://shravan-kuchkula.github.io/create-aws-redshift-cluster/)
+- You need to have AWS Redshift cluster endpoint. [guide to create Redshift cluster using IaC](https://shravan-kuchkula.github.io/create-aws-redshift-cluster/)
 
 * **Step 1:** Once the requirements are met, launch Airflow on your laptop by running: `docker-compose up` from the location where `docker-compose.yml` is located.
 ```bash
