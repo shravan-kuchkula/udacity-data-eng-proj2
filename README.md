@@ -67,7 +67,11 @@ Here's the directory organization:
 
 ```bash
 ├── README.md
+├── Report
+│   ├── Report_Shravan_Kuchkula.ipynb
+│   └── dwh-streeteasy.cfg
 ├── docker-compose.yml
+├── images
 └── street-easy
     ├── dags
     │   ├── create_postgres_table.py
@@ -281,7 +285,7 @@ Instead of using CSV, when possible use **parquet file format**.
 **Parquet Format**: Parquet is a compressed columnar data format and is structured with data accessible in chunks that allows efficient read/write operations without processing the entire file. This structured format supports Spark's predicate pushdown functionality, thus providing significant performance improvement. Finally, parquet files automatically include schema information and handle data encoding. This is perfect for intermediary or on-disk representation of processed data. Note that parquet files are binary file format and can only be used with proper tools.
 
 ### Recommendations for downstream processing:
-The search field coming through from the application appear to by `YAML` format. I found that writing regular expression to parse out the search field is prone to errors if the schema evolves. A better way to capture the search field is using JSON or AVRO, as this has some form of schema tied to it, so that downstream applications can know when the schema evolves.
+The search field coming through from the application appears to be `YAML` format. I found that writing regular expression to parse out the search field is prone to errors if the schema evolves. A better way to capture the search field is using JSON or AVRO, as this has some form of schema tied to it, so that downstream applications can know when the schema evolves.
 
 ## How to run this project?
 **pre-requisites**:
@@ -289,7 +293,7 @@ The search field coming through from the application appear to by `YAML` format.
 - You have credentials for source and destination S3 buckets. (Both are private buckets)
 - You need to have AWS Redshift cluster endpoint. [guide to create Redshift cluster using IaC](https://shravan-kuchkula.github.io/create-aws-redshift-cluster/)
 
-* **Step 1:** Once the requirements are met, launch Airflow on your laptop by running: `docker-compose up` from the location where `docker-compose.yml` is located.
+**Step 1:** Once the requirements are met, launch Airflow on your laptop by running: `docker-compose up` from the location where `docker-compose.yml` is located.
 ```bash
 Shravan: batch-etl$ docker-compose up
 Creating network "batch-etl_default" with the default driver
@@ -313,7 +317,7 @@ volumes:
   - ./street-easy/requirements.txt:/requirements.txt
 ```
 
-* **Step 2:**: Configure Airflow Variables
+**Step 2:**: Configure Airflow Variables
 Login to Airflow Console: http://localhost:8080/admin , and create two `Variables`. Our code uses these variables to reference the source and destination buckets.
 ![variables](images/variables.png)
 
@@ -323,6 +327,6 @@ Next, create the following connections:
 - *redshift*: Shown below is the configuration
 ![connections](images/connections.png)
 
-* **Step 3**: There are two dags in our dag-bag: `create_postgres_table` and `street_easy`. The first is used to create a table in Redshift. Turn on the `create_postgres_table` DAG and trigger it manually. Once the dag finishes running, it will create the tables in Redshift. After that, turn on the `street_easy` dag. This will trigger the execution automatically since the start date is in the past.
+**Step 3**: There are two dags in our dag-bag: `create_postgres_table` and `street_easy`. The first is used to create a table in Redshift. Turn on the `create_postgres_table` DAG and trigger it manually. Once the dag finishes running, it will create the tables in Redshift. After that, turn on the `street_easy` dag. This will trigger the execution automatically since the start date is in the past.
 
-* **Step 4**: Launch the jupyter notebook provided here: [notebook](https://github.com/shravan-kuchkula/batch-etl/blob/16986034763616f330d27febf22c92efa007d1db/Report/Report_Shravan_Kuchkula.ipynb) . Navigate to "Answering Business questions using data" section. Run the code cells.
+**Step 4**: Launch the jupyter notebook provided here: [notebook](https://github.com/shravan-kuchkula/batch-etl/blob/16986034763616f330d27febf22c92efa007d1db/Report/Report_Shravan_Kuchkula.ipynb) . Navigate to "Answering Business questions using data" section. Run the code cells.
