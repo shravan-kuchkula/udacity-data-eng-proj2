@@ -60,8 +60,8 @@ By default, airflow comes with some simple built-in operators like `PythonOperat
 
 ![operators](images/operators.png)
 
-- **StreetEasyOperator**: Extract data from **source S3 bucket**, processes the data in-memory by applying a series of transformations found inside `transforms.py`, then loads it to destination S3 bucket. Please see the code here:
-- **ValidSearchStatsOperator**: Takes data from **destination S3 bucket**, aggregates the data on a per-day basis, and uploads it to Reshift table `search_stats`. Please see the code here:
+- **StreetEasyOperator**: Extract data from **source S3 bucket**, processes the data in-memory by applying a series of transformations found inside `transforms.py`, then loads it to destination S3 bucket. Please see the code here: [StreetEasyOperator](https://github.com/shravan-kuchkula/batch-etl/blob/master/street-easy/plugins/operators/extract_and_transform_streeteasy.py)
+- **ValidSearchStatsOperator**: Takes data from **destination S3 bucket**, aggregates the data on a per-day basis, and uploads it to Redshift table `search_stats`. Please see the code here: [ValidSearchStatsOperator](https://github.com/shravan-kuchkula/batch-etl/blob/master/street-easy/plugins/operators/valid_search_stats.py)
 
 Here's the directory organization:
 
@@ -157,7 +157,7 @@ searches
 36981443
 13923552
 ```
-The code used to calculate the unique valid searches can be found here: TODO
+The code used to calculate the unique valid searches can be found here: [transforms.py](https://github.com/shravan-kuchkula/batch-etl/blob/16986034763616f330d27febf22c92efa007d1db/street-easy/plugins/operators/extract_and_transform_streeteasy.py#L112)
 
 We will be making using of `pandas`, `psycopg2` and `matplotlib` to use the data we gathered to answer the next set of business questions.
 
@@ -191,99 +191,9 @@ df = df.set_index('day')
 print(df.shape)
 df.head()
 ```
-
     (68, 6)
-
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>num_searches</th>
-      <th>num_users</th>
-      <th>num_rental_searches</th>
-      <th>num_sales_searches</th>
-      <th>num_rental_and_sales_searches</th>
-      <th>num_none_type_searches</th>
-    </tr>
-    <tr>
-      <th>day</th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>2018-01-20</th>
-      <td>224487</td>
-      <td>128544</td>
-      <td>91839</td>
-      <td>15592</td>
-      <td>2840</td>
-      <td>18273</td>
-    </tr>
-    <tr>
-      <th>2018-01-21</th>
-      <td>224945</td>
-      <td>128799</td>
-      <td>91805</td>
-      <td>15541</td>
-      <td>2852</td>
-      <td>18601</td>
-    </tr>
-    <tr>
-      <th>2018-01-22</th>
-      <td>225577</td>
-      <td>129167</td>
-      <td>91749</td>
-      <td>15487</td>
-      <td>2836</td>
-      <td>19095</td>
-    </tr>
-    <tr>
-      <th>2018-01-23</th>
-      <td>226306</td>
-      <td>129504</td>
-      <td>91775</td>
-      <td>15531</td>
-      <td>2842</td>
-      <td>19356</td>
-    </tr>
-    <tr>
-      <th>2018-01-24</th>
-      <td>226962</td>
-      <td>129838</td>
-      <td>91795</td>
-      <td>15560</td>
-      <td>2848</td>
-      <td>19635</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
+```
+![dataframe](images/dataframe.png)
 
 From this dataframe, for this question, we are interested in finding out the **total number of valid searches** on a given day. This is captured in the `num_searches` column. Shown below is a plot showing the num_searches per day for the entire time-period.
 
@@ -357,8 +267,7 @@ Mainly there are two trends observed with this timeseries data:
 ### Recommendations in data storage:
 In terms of storing data, using CSV files comes with some problems down the line. Here are some difficulties with CSV files:
 - No defined schema: There are no data types included and column names beyond a header row.
-- Nested data requires special handling:
--
+- Nested data requires special handling.
 In addition to these issues with using CSV file format, **Spark** has some **specific problems** when working with CSV data:
 - CSV files are quite **slow to import** and parse.
 - The files cannot be shared between workers during the import process.
@@ -372,3 +281,47 @@ Instead of using CSV, when possible use **parquet file format**.
 
 ### Recommendations for downstream processing:
 The search field coming through from the application appear to by `YAML` format. I found that writing regular expression to parse out the search field is prone to errors if the schema evolves. A better way to capture the search field is using JSON or AVRO, as this has some form of schema tied to it, so that downstream applications can know when the schema evolves.
+
+## How to run this project?
+**pre-requisites**:
+- Docker and docker-compose must be running on your laptop.
+- You have credentials for source and destination S3 buckets. (Both are private buckets)
+- You need to have AWS Redshift cluster endpoint. [guide to create](https://shravan-kuchkula.github.io/create-aws-redshift-cluster/)
+
+* **Step 1:** Once the requirements are met, launch Airflow on your laptop by running: `docker-compose up` from the location where `docker-compose.yml` is located.
+```bash
+Shravan: batch-etl$ docker-compose up
+Creating network "batch-etl_default" with the default driver
+Creating batch-etl_postgres_1 ... done
+Creating batch-etl_webserver_1 ... done
+
+webserver_1  |   ____________       _____________
+webserver_1  |  ____    |__( )_________  __/__  /________      __
+webserver_1  | ____  /| |_  /__  ___/_  /_ __  /_  __ \_ | /| / /
+webserver_1  | ___  ___ |  / _  /   _  __/ _  / / /_/ /_ |/ |/ /
+webserver_1  |  _/_/  |_/_/  /_/    /_/    /_/  \____/____/|__/
+```
+Inside the `docker-compose.yml` we have the **volumes** section, which maps our dags directory to airflow's dag-bag: `/usr/local/airflow/dags`. Next, we map the custom Airflow Plugin that we created to extend Airflow's functionality by adding two custom operators, this is mapped to the airflow's  plugin directory. Lastly, inside both my operators, I have made use of `s3fs` python package, which is essentially a wrapper around `boto3` package, but provides more simpler interface. Add `s3fs` to `requirements.txt` and map that to `/requirements.txt`. The reason we need to map this to way is because the entrypoint docker script runs `pip install -r requirements.txt` from `/` within the docker container.
+
+```
+volumes:
+  - ./street-easy/dags:/usr/local/airflow/dags
+  # Uncomment to include custom plugins
+  - ./street-easy/plugins:/usr/local/airflow/plugins
+  # Additional python packages used inside airflow operators
+  - ./street-easy/requirements.txt:/requirements.txt
+```
+
+* **Step 2:**: Configure Airflow Variables
+Login to Airflow Console: http://localhost:8080/admin , and create two `Variables`. Our code uses these variables to reference the source and destination buckets.
+![variables](images/variables.png)
+
+Next, create the following connections:
+- *aws_credentials*: (Type: Amazon Web Services, Login:<s3-access-key>, Password:<s3-secret-key>)
+- *aws_dest_credentials*: (Type: Amazon Web Services, Login:<s3-access-key>, Password:<s3-secret-key>)
+- *redshift*: Shown below is the configuration
+![connections](images/connections.png)
+
+* **Step 3**: There are two dags in our dag-bag: `create_postgres_table` and `street_easy`. The first is used to create a table in Redshift. Turn on the `create_postgres_table` DAG and trigger it manually. Once the dag finishes running, it will create the tables in Redshift. After that, turn on the `street_easy` dag. This will trigger the execution automatically since the start date is in the past.
+
+* **Step 4**: Launch the jupyter notebook provided here: [notebook](https://github.com/shravan-kuchkula/batch-etl/blob/16986034763616f330d27febf22c92efa007d1db/Report/Report_Shravan_Kuchkula.ipynb) . Navigate to "Answering Business questions using data" section. Run the code cells.

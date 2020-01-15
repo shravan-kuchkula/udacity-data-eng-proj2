@@ -136,7 +136,7 @@ valid_searches_20180214.csv
 
 The `ValidSearchesStatsOperator` then takes each of datasets `valid_searches_{date}.csv` and calcuates summary stats and loads the results to **search_stats** table, as shown:
 
-![redshift](Report_Shravan_Kuchkula/redshift.png)
+![redshift](Report_Shravan_Kuchkula_files/redshift.png)
 
 
 ## Answering business questions using data
@@ -191,99 +191,9 @@ df = df.set_index('day')
 print(df.shape)
 df.head()
 ```
-
     (68, 6)
-
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>num_searches</th>
-      <th>num_users</th>
-      <th>num_rental_searches</th>
-      <th>num_sales_searches</th>
-      <th>num_rental_and_sales_searches</th>
-      <th>num_none_type_searches</th>
-    </tr>
-    <tr>
-      <th>day</th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>2018-01-20</th>
-      <td>224487</td>
-      <td>128544</td>
-      <td>91839</td>
-      <td>15592</td>
-      <td>2840</td>
-      <td>18273</td>
-    </tr>
-    <tr>
-      <th>2018-01-21</th>
-      <td>224945</td>
-      <td>128799</td>
-      <td>91805</td>
-      <td>15541</td>
-      <td>2852</td>
-      <td>18601</td>
-    </tr>
-    <tr>
-      <th>2018-01-22</th>
-      <td>225577</td>
-      <td>129167</td>
-      <td>91749</td>
-      <td>15487</td>
-      <td>2836</td>
-      <td>19095</td>
-    </tr>
-    <tr>
-      <th>2018-01-23</th>
-      <td>226306</td>
-      <td>129504</td>
-      <td>91775</td>
-      <td>15531</td>
-      <td>2842</td>
-      <td>19356</td>
-    </tr>
-    <tr>
-      <th>2018-01-24</th>
-      <td>226962</td>
-      <td>129838</td>
-      <td>91795</td>
-      <td>15560</td>
-      <td>2848</td>
-      <td>19635</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
+```
+![dataframe](Report_Shravan_Kuchkula_files/dataframe.png)
 
 From this dataframe, for this question, we are interested in finding out the **total number of valid searches** on a given day. This is captured in the `num_searches` column. Shown below is a plot showing the num_searches per day for the entire time-period.
 
