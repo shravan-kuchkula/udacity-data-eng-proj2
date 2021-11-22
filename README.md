@@ -1,6 +1,6 @@
 
 ## ETL data pipeline to process StreetEasy data
-### Author: Shravan Kuchkula (email: shravan.kuchkula@gmail.com)
+
 **Project Description**:
 
 An online real-estate company is interested in understanding `user enagagement` by analyzing user search patterns to send targeted emails to the users with valid searches. A valid search is termed as one where the search metadata contains `enabled:true` and number of clicks is atleast `3`.
@@ -60,15 +60,15 @@ By default, airflow comes with some simple built-in operators like `PythonOperat
 
 ![operators](images/operators.png)
 
-- **StreetEasyOperator**: Extract data from **source S3 bucket**, processes the data in-memory by applying a series of transformations found inside `transforms.py`, then loads it to destination S3 bucket. Please see the code here: [StreetEasyOperator](https://github.com/shravan-kuchkula/batch-etl/blob/master/street-easy/plugins/operators/extract_and_transform_streeteasy.py)
-- **ValidSearchStatsOperator**: Takes data from **destination S3 bucket**, aggregates the data on a per-day basis, and uploads it to Redshift table `search_stats`. Please see the code here: [ValidSearchStatsOperator](https://github.com/shravan-kuchkula/batch-etl/blob/master/street-easy/plugins/operators/valid_search_stats.py)
+- **StreetEasyOperator**: Extract data from **source S3 bucket**, processes the data in-memory by applying a series of transformations found inside `transforms.py`, then loads it to destination S3 bucket. Please see the code here: [StreetEasyOperator](https://github.com/nn/batch-etl/blob/master/street-easy/plugins/operators/extract_and_transform_streeteasy.py)
+- **ValidSearchStatsOperator**: Takes data from **destination S3 bucket**, aggregates the data on a per-day basis, and uploads it to Redshift table `search_stats`. Please see the code here: [ValidSearchStatsOperator](https://github.com/nn/batch-etl/blob/master/street-easy/plugins/operators/valid_search_stats.py)
 
 Here's the directory organization:
 
 ```bash
 ├── README.md
 ├── Report
-│   ├── Report_Shravan_Kuchkula.ipynb
+│   ├── Report.ipynb
 │   └── dwh-streeteasy.cfg
 ├── docker-compose.yml
 ├── images
@@ -161,7 +161,7 @@ searches
 36981443
 13923552
 ```
-The code used to calculate the unique valid searches can be found here: [transforms.py](https://github.com/shravan-kuchkula/batch-etl/blob/16986034763616f330d27febf22c92efa007d1db/street-easy/plugins/operators/extract_and_transform_streeteasy.py#L112)
+The code used to calculate the unique valid searches can be found here: [transforms.py](https://github.com/nn/batch-etl/blob/16986034763616f330d27febf22c92efa007d1db/street-easy/plugins/operators/extract_and_transform_streeteasy.py#L112)
 
 We will be making using of `pandas`, `psycopg2` and `matplotlib` to use the data we gathered to answer the next set of business questions.
 
@@ -213,7 +213,7 @@ plt.show()
 ```
 
 
-![png](images/Report_Shravan_Kuchkula_8_0.png)
+![png](images/Report__8_0.png)
 
 
 **Observation**: The red band indicates a sharp drop in the number of valid searches on `2018-03-24`.
@@ -232,7 +232,7 @@ plt.show()
 ```
 
 
-![png](images/Report_Shravan_Kuchkula_11_0.png)
+![png](images/Report__11_0.png)
 
 
 ### Business question: Most engaging search
@@ -252,7 +252,7 @@ plt.show()
 ```
 
 
-![png](images/Report_Shravan_Kuchkula_13_0.png)
+![png](images/Report__13_0.png)
 
 
 ### Business question: What would the email traffic look like if we changed the definition of a valid search from 3 clicks to 2?
@@ -291,11 +291,11 @@ The search field coming through from the application appears to be `YAML` format
 **pre-requisites**:
 - Docker and docker-compose must be running on your laptop.
 - You have credentials for source and destination S3 buckets. (Both are private buckets)
-- You need to have AWS Redshift cluster endpoint. [guide to create Redshift cluster using IaC](https://shravan-kuchkula.github.io/create-aws-redshift-cluster/)
+- You need to have AWS Redshift cluster endpoint. [guide to create Redshift cluster using IaC](https://nn.github.io/create-aws-redshift-cluster/)
 
 **Step 1:** Once the requirements are met, launch Airflow on your laptop by running: `docker-compose up` from the location where `docker-compose.yml` is located.
 ```bash
-Shravan: batch-etl$ docker-compose up
+: batch-etl$ docker-compose up
 Creating network "batch-etl_default" with the default driver
 Creating batch-etl_postgres_1 ... done
 Creating batch-etl_webserver_1 ... done
@@ -329,4 +329,4 @@ Next, create the following connections:
 
 **Step 3**: There are two dags in our dag-bag: `create_postgres_table` and `street_easy`. The first is used to create a table in Redshift. Turn on the `create_postgres_table` DAG and trigger it manually. Once the dag finishes running, it will create the tables in Redshift. After that, turn on the `street_easy` dag. This will trigger the execution automatically since the start date is in the past.
 
-**Step 4**: Launch the jupyter notebook provided here: [notebook](https://github.com/shravan-kuchkula/batch-etl/blob/16986034763616f330d27febf22c92efa007d1db/Report/Report_Shravan_Kuchkula.ipynb) . Navigate to "Answering Business questions using data" section. Run the code cells.
+**Step 4**: Launch the jupyter notebook provided here: [notebook](https://github.com/nn/batch-etl/blob/16986034763616f330d27febf22c92efa007d1db/Report/Report.ipynb) . Navigate to "Answering Business questions using data" section. Run the code cells.
